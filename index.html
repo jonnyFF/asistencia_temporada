@@ -6,7 +6,7 @@
 <title>Confirmación de Asistencia</title>
 
 <script src="https://unpkg.com/@zxing/library@latest"></script>
-    
+
 </head>
 <body>
 
@@ -110,13 +110,10 @@ function iniciarCamara() {
 
             if (result) {
 
-                let codigo = result.text;
-
-                document.getElementById("dni").value = codigo;
+                alert(result.text);
 
                 codeReader.reset();
 
-                buscarDni();
             }
 
         }
