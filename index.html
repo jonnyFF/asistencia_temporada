@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmación de Asistencia</title>
@@ -8,120 +10,58 @@
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 </head>
+
 <body>
 
 <h2>Confirmación de Asistencia</h2>
-
-<p>Ingrese DNI:</p>
-
-<input type="number" id="dni">
-<button onclick="buscarDni()">Buscar</button>
-
-<br><br>
 
 <button onclick="iniciarCamara()">Escanear DNI</button>
 
 <br><br>
 
+<button onclick="mostrarManual()">No tengo mi DNI</button>
+
+<input type="hidden" id="dni">
+
+<div id="manual" style="display:none; margin-top:20px;">
+
+    <p>Ingrese su DNI</p>
+
+    <input type="number" id="dniManual">
+
+    <br><br>
+
+    <button onclick="buscarManual()">Continuar</button>
+
+</div>
+
+<br><br>
+
+<div id="estado"></div>
+
 <video id="reader" width="320" height="240" style="border:1px solid #ccc;"></video>
+
+<br><br>
 
 <div id="resultado"></div>
 
 <script>
 
-const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxUtipWdjYRXvc9hb3zVdkVrJfgpKr-dmLxPM8vj5pikhvnT7wHr_W5v89WHXJV5ZNKDA/exec";
+const URL_SCRIPT =
+"https://script.google.com/macros/s/AKfycbxUtipWdjYRXvc9hb3zVdkVrJfgpKr-dmLxPM8vj5pikhvnT7wHr_W5v89WHXJV5ZNKDA/exec";
 
-function buscarDni() {
+let modoIngreso = "DNI";
 
-    let dni = document.getElementById("dni").value;
+function mostrarManual() {
 
-    fetch(URL_SCRIPT + "?dni=" + dni)
-    .then(response => response.json())
-    .then(data => {
+    modoIngreso = "MANUAL";
 
-        if (data.encontrado) {
-
-            document.getElementById("resultado").innerHTML =
-                "<h3>Invitado encontrado</h3>" +
-                "<p><b>Nombre:</b> " + data.nombre + "</p>" +
-                "<button onclick=\"responder('" + data.dni + "','ASISTE')\">Asistiré</button>" +
-                "<br><br>" +
-                "<button onclick=\"responder('" + data.dni + "','NO ASISTE')\">No asistiré</button>";
-
-        } else {
-
-            document.getElementById("resultado").innerHTML =
-                "<h3>DNI no autorizado</h3>";
-
-        }
-
-    })
-    .catch(error => {
-        console.log(error);
-    });
+    document.getElementById("manual").style.display = "block";
 
 }
 
-function responder(dni, asistencia) {
+function buscarManual() {
 
-    fetch(URL_SCRIPT, {
-        method: "POST",
-        body: JSON.stringify({
-            dni: dni,
-            asistencia: asistencia
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    let dni = document.getElementById("dniManual").value;
 
-        if (data.ok) {
-
-            document.getElementById("resultado").innerHTML =
-                "<h3>Respuesta registrada correctamente</h3>";
-
-        } else {
-
-            if (data.mensaje == "YA_RESPONDIO") {
-
-                document.getElementById("resultado").innerHTML =
-                    "<h3>Este DNI ya registró una respuesta.</h3>";
-
-            } else {
-
-                document.getElementById("resultado").innerHTML =
-                    "<h3>Error al guardar la respuesta.</h3>";
-
-            }
-
-        }
-
-    });
-
-}
-
-function iniciarCamara() {
-
-    const codeReader = new ZXing.BrowserMultiFormatReader();
-
-    codeReader.decodeFromVideoDevice(
-        null,
-        'reader',
-        (result, err) => {
-
-            if (result) {
-
-                alert(result.text);
-
-                codeReader.reset();
-
-            }
-
-        }
-    );
-
-}
-
-</script>
-
-</body>
-</html>
+    document.getElementById("dni").value = dni;
