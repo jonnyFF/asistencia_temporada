@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmación de Asistencia</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+unpkg.com/@zxing/library@latest"></script>
 
 </head>
 <body>
@@ -21,7 +21,9 @@
 
 <button onclick="iniciarCamara()">Escanear DNI</button>
 
-<div id="reader" style="width:300px;margin-top:20px;"></div>
+<br><br>
+
+<video id="reader" width="320" height="240" style="border:1px solid #ccc;"></video>
 
 <div id="resultado"></div>
 
@@ -53,6 +55,9 @@ function buscarDni() {
 
         }
 
+    })
+    .catch(error => {
+        console.log(error);
     });
 
 }
@@ -96,21 +101,23 @@ function responder(dni, asistencia) {
 
 function iniciarCamara() {
 
-    const html5QrCode = new Html5Qrcode("reader");
+    const codeReader = new ZXing.BrowserMultiFormatReader();
 
-    html5QrCode.start(
-        { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: 250
-        },
-        function(decodedText) {
+    codeReader.decodeFromVideoDevice(
+        null,
+        'reader',
+        (result, err) => {
 
-            document.getElementById("dni").value = decodedText;
+            if (result) {
 
-            html5QrCode.stop();
+                let codigo = result.text;
 
-            buscarDni();
+                document.getElementById("dni").value = codigo;
+
+                codeReader.reset();
+
+                buscarDni();
+            }
 
         }
     );
