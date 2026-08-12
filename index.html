@@ -65,3 +65,142 @@ function buscarManual() {
     let dni = document.getElementById("dniManual").value;
 
     document.getElementById("dni").value = dni;
+
+    buscarDni();
+
+}
+
+function iniciarCamara() {
+
+    modoIngreso = "DNI";
+
+    document.getElementById("estado").innerHTML =
+        "<h3>Escaneando DNI...</h3>";
+
+    const codeReader = new ZXing.BrowserMultiFormatReader();
+
+    codeReader.decodeFromVideoDevice(
+        null,
+        'reader',
+        (result, err) => {
+
+            if (result) {
+
+                let texto = result.text;
+
+                let partes = texto.split("@");
+
+                let dni = "";
+
+                for (let i = 0; i < partes.length; i++) {
+
+                    let valor = partes[i].trim();
+
+                    if (/^\d{7,8}$/.test(valor)) {
+
+                        dni = valor;
+
+                    }
+
+                }
+
+                if (dni === "") {
+
+                    document.getElementById("estado").innerHTML =
+                        "<h3>No se pudo identificar el DNI</h3>";
+
+                    return;
+
+                }
+
+                document.getElementById("dni").value = dni;
+
+                document.getElementById("estado").innerHTML =
+                    "<h3>Buscando invitado...</h3>";
+
+                codeReader.reset();
+
+                buscarDni();
+
+            }
+
+        }
+    );
+
+}
+
+function buscarDni() {
+
+    let dni = document.getElementById("dni").value;
+
+    fetch(URL_SCRIPT + "?dni=" + dni)
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.encontrado) {
+
+            document.getElementById("estado").innerHTML = "";
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>Invitado encontrado</h3>" +
+                "<p><strong>Nombre:</strong> " + data.nombre + "</p>" +
+                "<p><strong>DNI:</strong> " + data.dni + "</p>" +
+                "<button onclick=\"responder('" + data.dni + "','ASISTE')\">Asistiré</button>" +
+                "<br><br>" +
+                "<button onclick=\"responder('" + data.dni + "','NO ASISTE')\">No asistiré</button>";
+
+        } else {
+
+            document.getElementById("estado").innerHTML = "";
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>DNI no autorizado</h3>";
+
+        }
+
+    });
+
+}
+
+function responder(dni, asistencia) {
+
+    fetch(URL_SCRIPT, {
+        method: "POST",
+        body: JSON.stringify({
+            dni: dni,
+            asistencia: asistencia,
+            modoIngreso: modoIngreso
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.ok) {
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>✅ Respuesta registrada correctamente</h3>";
+
+        } else {
+
+            if (data.mensaje == "YA_RESPONDIO") {
+
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Este DNI ya registró una respuesta.</h3>";
+
+            } else {
+
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Error al guardar la respuesta.</h3>";
+
+            }
+
+        }
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
