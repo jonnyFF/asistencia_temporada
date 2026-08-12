@@ -175,6 +175,14 @@ function buscarDni() {
 
             document.getElementById("estado").innerHTML = "";
 
+            document.getElementById("btnEscanear").style.display = "none";
+
+            document.getElementById("btnManual").style.display = "none";
+
+            document.getElementById("manual").style.display = "none";
+
+            document.getElementById("reader").style.display = "none";
+
             document.getElementById("resultado").innerHTML =
                 "<h3>Invitado encontrado</h3>" +
                 "<p><strong>Nombre:</strong> " + data.nombre + "</p>" +
@@ -194,9 +202,7 @@ function buscarDni() {
 
     });
 
-}
-
-function responder(dni, asistencia) {
+}function responder(dni, asistencia) {
 
     fetch(URL_SCRIPT, {
         method: "POST",
@@ -212,8 +218,8 @@ function responder(dni, asistencia) {
         if (data.ok) {
 
             document.getElementById("resultado").innerHTML =
-                "<h3>✅ Respuesta registrada correctamente</h3>";
-
+		"<h2>✅ Gracias</h2>" +
+		"<p>Su respuesta fue registrada correctamente.</p>";
         } else {
 
             if (data.mensaje == "YA_RESPONDIO") {
