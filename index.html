@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Confirmación de Asistencia</title>
-<script src="https://unpkg.com/html5-qrcode"></
+
+/html5-qrcode"></script>
+
 </head>
 <body>
 
@@ -14,6 +16,12 @@
 
 <input type="number" id="dni">
 <button onclick="buscarDni()">Buscar</button>
+
+<br><br>
+
+<button onclick="iniciarCamara()">Escanear DNI</button>
+
+<div id="reader" style="width:300px;margin-top:20px;"></div>
 
 <div id="resultado"></div>
 
@@ -34,8 +42,9 @@ function buscarDni() {
             document.getElementById("resultado").innerHTML =
                 "<h3>Invitado encontrado</h3>" +
                 "<p><b>Nombre:</b> " + data.nombre + "</p>" +
-               "<button onclick=\"responder('" + data.dni + "','ASISTE')\">Asistiré</button><br><br>" +
-		"<button onclick=\"responder('" + data.dni + "','NO ASISTE')\">No asistiré</button>";
+                "<button onclick=\"responder('" + data.dni + "','ASISTE')\">Asistiré</button>" +
+                "<br><br>" +
+                "<button onclick=\"responder('" + data.dni + "','NO ASISTE')\">No asistiré</button>";
 
         } else {
 
@@ -50,41 +59,63 @@ function buscarDni() {
 
 function responder(dni, asistencia) {
 
-  fetch(URL_SCRIPT, {
-    method: "POST",
-    body: JSON.stringify({
-      dni: dni,
-      asistencia: asistencia
+    fetch(URL_SCRIPT, {
+        method: "POST",
+        body: JSON.stringify({
+            dni: dni,
+            asistencia: asistencia
+        })
     })
-  })
-  .then(response => response.json())
-  .then(data => {
+    .then(response => response.json())
+    .then(data => {
 
-   if (data.ok) {
+        if (data.ok) {
 
-  document.getElementById("resultado").innerHTML =
-    "<h3>Respuesta registrada correctamente</h3>";
+            document.getElementById("resultado").innerHTML =
+                "<h3>Respuesta registrada correctamente</h3>";
 
-} else {
+        } else {
 
-  if (data.mensaje == "YA_RESPONDIO") {
+            if (data.mensaje == "YA_RESPONDIO") {
 
-    document.getElementById("resultado").innerHTML =
-      "<h3>Este DNI ya registró una respuesta.</h3>";
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Este DNI ya registró una respuesta.</h3>";
 
-  } else {
+            } else {
 
-    document.getElementById("resultado").innerHTML =
-      "<h3>Error al guardar la respuesta.</h3>";
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Error al guardar la respuesta.</h3>";
 
-  }
+            }
+
+        }
+
+    });
 
 }
 
-  });
+function iniciarCamara() {
+
+    const html5QrCode = new Html5Qrcode("reader");
+
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 10,
+            qrbox: 250
+        },
+        function(decodedText) {
+
+            document.getElementById("dni").value = decodedText;
+
+            html5QrCode.stop();
+
+            buscarDni();
+
+        }
+    );
 
 }
-
 
 </script>
 
