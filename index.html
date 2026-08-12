@@ -207,3 +207,34 @@ function responder(dni, asistencia) {
         })
     })
     .then(response => response.json())
+    .then(data => {
+
+        if (data.ok) {
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>✅ Respuesta registrada correctamente</h3>";
+
+        } else {
+
+            if (data.mensaje == "YA_RESPONDIO") {
+
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Este DNI ya registró una respuesta.</h3>";
+
+            } else {
+
+                document.getElementById("resultado").innerHTML =
+                    "<h3>Error al guardar la respuesta.</h3>";
+
+            }
+
+        }
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
