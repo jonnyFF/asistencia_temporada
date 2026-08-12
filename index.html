@@ -9,17 +9,45 @@
 
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+}
+
+button{
+    padding: 12px 20px;
+    font-size: 16px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+input{
+    padding: 10px;
+    font-size: 16px;
+    text-align: center;
+}
+
+#reader{
+    display:block;
+    margin:auto;
+}
+
+</style>
+
 </head>
 
 <body>
 
 <h2>Confirmación de Asistencia</h2>
 
-<button onclick="iniciarCamara()">Escanear DNI</button>
+<button id="btnEscanear" onclick="iniciarCamara()">Escanear DNI</button>
 
 <br><br>
 
-<button onclick="mostrarManual()">No tengo mi DNI</button>
+<button id="btnManual" onclick="mostrarManual()">No tengo mi DNI</button>
 
 <input type="hidden" id="dni">
 
@@ -56,6 +84,8 @@ function mostrarManual() {
 
     modoIngreso = "MANUAL";
 
+    document.getElementById("btnEscanear").disabled = true;
+
     document.getElementById("manual").style.display = "block";
 
 }
@@ -73,6 +103,8 @@ function buscarManual() {
 function iniciarCamara() {
 
     modoIngreso = "DNI";
+
+    document.getElementById("btnManual").disabled = true;
 
     document.getElementById("estado").innerHTML =
         "<h3>Escaneando DNI...</h3>";
@@ -108,6 +140,8 @@ function iniciarCamara() {
 
                     document.getElementById("estado").innerHTML =
                         "<h3>No se pudo identificar el DNI</h3>";
+
+                    document.getElementById("btnManual").disabled = false;
 
                     return;
 
@@ -173,34 +207,3 @@ function responder(dni, asistencia) {
         })
     })
     .then(response => response.json())
-    .then(data => {
-
-        if (data.ok) {
-
-            document.getElementById("resultado").innerHTML =
-                "<h3>✅ Respuesta registrada correctamente</h3>";
-
-        } else {
-
-            if (data.mensaje == "YA_RESPONDIO") {
-
-                document.getElementById("resultado").innerHTML =
-                    "<h3>Este DNI ya registró una respuesta.</h3>";
-
-            } else {
-
-                document.getElementById("resultado").innerHTML =
-                    "<h3>Error al guardar la respuesta.</h3>";
-
-            }
-
-        }
-
-    });
-
-}
-
-</script>
-
-</body>
-</html>
