@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmación de Asistencia</title>
+</head>
+<body>
+
+<h2>Confirmación de Asistencia</h2>
+
+<p>Ingrese DNI:</p>
+
+<input type="number" id="dni">
+<button onclick="buscarDni()">Buscar</button>
+
+<div id="resultado"></div>
+
+<script>
+
+const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxUtipWdjYRXvc9hb3zVdkVrJfgpKr-dmLxPM8vj5pikhvnT7wHr_W5v89WHXJV5ZNKDA/exec";
+
+function buscarDni() {
+
+    let dni = document.getElementById("dni").value;
+
+    fetch(URL_SCRIPT + "?dni=" + dni)
+    .then(response => response.json())
+    .then(data => {
+
+        if (data.encontrado) {
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>Invitado encontrado</h3>" +
+                "<p><b>Nombre:</b> " + data.nombre + "</p>" +
+               "<button onclick=\"responder('" + data.dni + "','ASISTE')\">Asistiré</button><br><br>" +
+		"<button onclick=\"responder('" + data.dni + "','NO ASISTE')\">No asistiré</button>";
+
+        } else {
+
+            document.getElementById("resultado").innerHTML =
+                "<h3>DNI no autorizado</h3>";
+
+        }
+
+    });
+
+}
+
+function responder(dni, asistencia) {
+
+  fetch(URL_SCRIPT, {
+    method: "POST",
+    body: JSON.stringify({
+      dni: dni,
+      asistencia: asistencia
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+
+   if (data.ok) {
+
+  document.getElementById("resultado").innerHTML =
+    "<h3>Respuesta registrada correctamente</h3>";
+
+} else {
+
+  if (data.mensaje == "YA_RESPONDIO") {
+
+    document.getElementById("resultado").innerHTML =
+      "<h3>Este DNI ya registró una respuesta.</h3>";
+
+  } else {
+
+    document.getElementById("resultado").innerHTML =
+      "<h3>Error al guardar la respuesta.</h3>";
+
+  }
+
+}
+
+  });
+
+}
+
+
+</script>
+
+</body>
+</html>
