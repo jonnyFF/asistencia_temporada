@@ -1,305 +1,144 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Confirmación de Asistencia</title>
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-    .contenedor {
-      width: 100%;
-      max-width: 460px;
-      margin: 0 auto;
-      padding: 24px;
-      background: white;
-      border-radius: 12px;
-    }
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      margin: 6px;
-      cursor: pointer;
-      border-radius: 8px;
-      border: 1px solid #777;
-    }
-    button:disabled { cursor: not-allowed; opacity: 0.5; }
-    input {
-      width: 100%;
-      max-width: 280px;
-      padding: 12px;
-      font-size: 18px;
-      text-align: center;
-    }
-    video, img {
-      display: block;
-      width: 100%;
-      max-width: 320px;
-      height: auto;
-      margin: 14px auto;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-    }
-    #reader, #videoSelfie { display: none; }
-    #manual, #zonaSelfie { display: none; }
-    #estado, #resultado { margin-top: 18px; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmación de Asistencia</title>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;background:#f5f5f5}
+.contenedor{width:100%;max-width:440px;margin:0 auto;padding:22px;background:#fff;border-radius:12px}
+button{padding:12px 20px;font-size:16px;margin:6px;cursor:pointer;border:1px solid #777;border-radius:8px}
+button:disabled{opacity:.5;cursor:not-allowed}
+input{width:100%;max-width:260px;padding:11px;font-size:18px;text-align:center}
+video,img{display:block;margin:12px auto;border:1px solid #ccc;border-radius:8px;object-fit:cover}
+#reader{display:none;width:100%;max-width:320px;height:240px}
+#videoSelfie,#previewSelfie{width:160px;height:120px}
+#manual,#zonaSelfie{display:none}
+#estado,#resultado{margin-top:18px}
+</style>
 </head>
 <body>
-  <main class="contenedor">
-    <h2>Confirmación de Asistencia</h2>
-
-    <div id="opciones">
-      <button id="btnEscanear" type="button">Escanear DNI</button>
-      <br>
-      <button id="btnManual" type="button">No tengo mi DNI</button>
-    </div>
-
-    <input type="hidden" id="dni">
-
-    <div id="manual">
-      <p>Ingrese su DNI</p>
-      <input type="number" id="dniManual" inputmode="numeric" placeholder="Número de DNI">
-      <br><br>
-      <button id="btnContinuar" type="button">Continuar</button>
-    </div>
-
-    <div id="estado"></div>
-
-    <video id="reader" width="320" height="240" playsinline></video>
-
-    <div id="resultado"></div>
-
-    <div id="zonaSelfie">
-      <h3>Tomar selfie</h3>
-      <video id="videoSelfie" width="320" height="240" autoplay playsinline></video>
-      <button id="btnTomarSelfie" type="button">Tomar selfie</button>
-      <canvas id="canvasSelfie" width="320" height="240" hidden></canvas>
-      <img id="previewSelfie" alt="Vista previa de la selfie" hidden>
-      <p id="selfieLista" hidden>Selfie tomada correctamente.</p>
-    </div>
-  </main>
-
-  <script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxUtipWdjYRXvc9hb3zVdkVrJfgpKr-dmLxPM8vj5pikhvnT7wHr_W5v89WHXJV5ZNKDA/exec";
-
-    let modoIngreso = "DNI";
-    let fotoBase64 = "";
-    let streamSelfie = null;
-    let codeReader = null;
-
-    const btnEscanear = document.getElementById("btnEscanear");
-    const btnManual = document.getElementById("btnManual");
-    const btnContinuar = document.getElementById("btnContinuar");
-    const btnTomarSelfie = document.getElementById("btnTomarSelfie");
-
-    btnEscanear.addEventListener("click", iniciarCamara);
-    btnManual.addEventListener("click", mostrarManual);
-    btnContinuar.addEventListener("click", buscarManual);
-    btnTomarSelfie.addEventListener("click", capturarSelfie);
-
-    function mostrarManual() {
-      modoIngreso = "MANUAL";
-      btnEscanear.disabled = true;
-      btnManual.disabled = true;
-      document.getElementById("manual").style.display = "block";
-      document.getElementById("resultado").innerHTML = "";
-    }
-
-    function buscarManual() {
-      const dni = document.getElementById("dniManual").value.trim();
-
-      if (!/^\d{7,8}$/.test(dni)) {
-        document.getElementById("resultado").innerHTML = "<h3>Ingrese un DNI válido de 7 u 8 números.</h3>";
-        return;
-      }
-
-      document.getElementById("dni").value = dni;
-      buscarDni();
-    }
-
-    function extraerDni(texto) {
-      const partes = String(texto).split("@").map(valor => valor.trim());
-      const candidatos = partes.filter(valor => /^\d{7,8}$/.test(valor));
-
-      if (candidatos.length > 0) {
-        return candidatos[candidatos.length - 1];
-      }
-
-      const coincidencias = String(texto).match(/(?:^|\D)(\d{7,8})(?:\D|$)/g);
-      if (!coincidencias) return "";
-
-      const numeros = coincidencias
-        .map(valor => valor.replace(/\D/g, ""))
-        .filter(valor => /^\d{7,8}$/.test(valor));
-
-      return numeros.length ? numeros[numeros.length - 1] : "";
-    }
-
-    async function iniciarCamara() {
-      modoIngreso = "DNI";
-      btnManual.disabled = true;
-      btnEscanear.disabled = true;
-      document.getElementById("manual").style.display = "none";
-      document.getElementById("reader").style.display = "block";
-      document.getElementById("estado").innerHTML = "<h3>Escaneando DNI...</h3>";
-
-      if (typeof ZXing === "undefined") {
-        document.getElementById("estado").innerHTML = "<h3>No se pudo cargar el lector. Actualice la página.</h3>";
-        btnEscanear.disabled = false;
-        btnManual.disabled = false;
-        return;
-      }
-
-      try {
-        codeReader = new ZXing.BrowserMultiFormatReader();
-
-        codeReader.decodeFromVideoDevice(null, "reader", (result) => {
-          if (!result) return;
-
-          const texto = result.text || (result.getText ? result.getText() : "");
-          const dni = extraerDni(texto);
-
-          if (!dni) {
-            document.getElementById("estado").innerHTML = "<h3>No se pudo identificar el DNI.</h3>";
-            return;
-          }
-
-          document.getElementById("dni").value = dni;
-          document.getElementById("estado").innerHTML = "<h3>Buscando invitado...</h3>";
-          codeReader.reset();
-          document.getElementById("reader").style.display = "none";
-          buscarDni();
-        });
-      } catch (error) {
-        document.getElementById("estado").innerHTML = "<h3>No se pudo abrir la cámara.</h3>";
-        btnEscanear.disabled = false;
-        btnManual.disabled = false;
-      }
-    }
-
-    async function iniciarSelfie() {
-      document.getElementById("zonaSelfie").style.display = "block";
-      document.getElementById("videoSelfie").style.display = "block";
-
-      try {
-        streamSelfie = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user" },
-          audio: false
-        });
-        document.getElementById("videoSelfie").srcObject = streamSelfie;
-      } catch (error) {
-        document.getElementById("zonaSelfie").innerHTML = "<h3>No se pudo abrir la cámara frontal.</h3>";
-      }
-    }
-
-    function capturarSelfie() {
-      const video = document.getElementById("videoSelfie");
-      const canvas = document.getElementById("canvasSelfie");
-      const contexto = canvas.getContext("2d");
-
-      contexto.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imagenCompleta = canvas.toDataURL("image/jpeg", 0.8);
-      fotoBase64 = imagenCompleta.split(",")[1];
-
-      const preview = document.getElementById("previewSelfie");
-      preview.src = imagenCompleta;
-      preview.hidden = false;
-      document.getElementById("selfieLista").hidden = false;
-      document.getElementById("videoSelfie").style.display = "none";
-      btnTomarSelfie.disabled = true;
-
-      if (streamSelfie) {
-        streamSelfie.getTracks().forEach(track => track.stop());
-      }
-    }
-
-    function buscarDni() {
-      const dni = document.getElementById("dni").value;
-      document.getElementById("estado").innerHTML = "<h3>Buscando invitado...</h3>";
-
-      fetch(URL_SCRIPT + "?dni=" + encodeURIComponent(dni))
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("estado").innerHTML = "";
-
-          if (!data.encontrado) {
-            document.getElementById("resultado").innerHTML = "<h3>DNI no autorizado</h3>";
-            return;
-          }
-
-          document.getElementById("opciones").style.display = "none";
-          document.getElementById("manual").style.display = "none";
-          document.getElementById("reader").style.display = "none";
-
-          if (modoIngreso === "MANUAL") {
-            iniciarSelfie();
-          }
-
-          document.getElementById("resultado").innerHTML =
-            "<h3>Datos encontrados</h3>" +
-            "<p><strong>Nombre:</strong> " + data.nombre + "</p>" +
-            "<p><strong>DNI:</strong> " + data.dni + "</p>" +
-            "<button id='btnAsiste' type='button'>Asistiré</button><br><br>" +
-            "<button id='btnNoAsiste' type='button'>No asistiré</button>";
-
-          document.getElementById("btnAsiste").addEventListener("click", () => responder(data.dni, "ASISTE"));
-          document.getElementById("btnNoAsiste").addEventListener("click", () => responder(data.dni, "NO ASISTE"));
-        })
-        .catch(() => {
-          document.getElementById("estado").innerHTML = "";
-          document.getElementById("resultado").innerHTML = "<h3>Error al consultar el DNI.</h3>";
-        });
-    }
-
-    function responder(dni, asistencia) {
-      if (modoIngreso === "MANUAL" && !fotoBase64) {
-        alert("Debe tomar una selfie antes de responder.");
-        return;
-      }
-
-      const botones = document.querySelectorAll("#resultado button");
-      botones.forEach(boton => boton.disabled = true);
-      document.getElementById("estado").innerHTML = "<h3>Guardando respuesta...</h3>";
-
-      fetch(URL_SCRIPT, {
-        method: "POST",
-        body: JSON.stringify({
-          dni: dni,
-          asistencia: asistencia,
-          modoIngreso: modoIngreso,
-          foto: fotoBase64
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          document.getElementById("estado").innerHTML = "";
-
-          if (data.ok) {
-            document.getElementById("zonaSelfie").style.display = "none";
-            document.getElementById("resultado").innerHTML =
-              "<h2>Gracias</h2><p>Su respuesta fue registrada correctamente.</p>";
-          } else if (data.mensaje === "YA_RESPONDIO") {
-            document.getElementById("resultado").innerHTML =
-              "<h3>Este DNI ya registró una respuesta.</h3>";
-          } else {
-            botones.forEach(boton => boton.disabled = false);
-            document.getElementById("resultado").insertAdjacentHTML("beforeend", "<h3>Error al guardar la respuesta.</h3>");
-          }
-        })
-        .catch(() => {
-          document.getElementById("estado").innerHTML = "";
-          botones.forEach(boton => boton.disabled = false);
-          document.getElementById("resultado").insertAdjacentHTML("beforeend", "<h3>Error de conexión.</h3>");
-        });
-    }
-  </script>
+<main class="contenedor">
+<h2>Confirmación de Asistencia</h2>
+<div id="opciones">
+<button id="btnEscanear" type="button">Escanear DNI</button><br>
+<button id="btnManual" type="button">No tengo mi DNI</button>
+</div>
+<input type="hidden" id="dni">
+<div id="manual">
+<p>Ingrese su DNI</p>
+<input type="number" id="dniManual" inputmode="numeric" placeholder="Número de DNI"><br><br>
+<button id="btnContinuar" type="button">Continuar</button>
+</div>
+<div id="estado"></div>
+<video id="reader" width="320" height="240" playsinline></video>
+<div id="datosInvitado"></div>
+<div id="zonaSelfie">
+<h3>Tomar selfie</h3>
+<video id="videoSelfie" width="160" height="120" autoplay playsinline></video>
+<button id="btnTomarSelfie" type="button">Tomar selfie</button>
+<canvas id="canvasSelfie" width="160" height="120" hidden></canvas>
+<img id="previewSelfie" width="160" height="120" alt="Vista previa de la selfie" hidden>
+<p id="selfieLista" hidden>Selfie tomada correctamente.</p>
+</div>
+<div id="resultado"></div>
+</main>
+<script>
+const URL_SCRIPT="https://script.google.com/macros/s/AKfycbxUtipWdjYRXvc9hb3zVdkVrJfgpKr-dmLxPM8vj5pikhvnT7wHr_W5v89WHXJV5ZNKDA/exec";
+let modoIngreso="DNI";
+let fotoBase64="";
+let streamSelfie=null;
+let codeReader=null;
+const btnEscanear=document.getElementById("btnEscanear");
+const btnManual=document.getElementById("btnManual");
+const btnContinuar=document.getElementById("btnContinuar");
+const btnTomarSelfie=document.getElementById("btnTomarSelfie");
+btnEscanear.addEventListener("click",iniciarCamara);
+btnManual.addEventListener("click",mostrarManual);
+btnContinuar.addEventListener("click",buscarManual);
+btnTomarSelfie.addEventListener("click",capturarSelfie);
+function mostrarManual(){
+ modoIngreso="MANUAL";btnEscanear.disabled=true;btnManual.disabled=true;
+ document.getElementById("manual").style.display="block";
+}
+function buscarManual(){
+ const dni=document.getElementById("dniManual").value.trim();
+ if(!/^\d{7,8}$/.test(dni)){document.getElementById("resultado").innerHTML="<h3>Ingrese un DNI válido de 7 u 8 números.</h3>";return;}
+ document.getElementById("dni").value=dni;buscarDni();
+}
+function extraerDni(texto){
+ const candidatos=String(texto).split("@").map(v=>v.trim()).filter(v=>/^\d{7,8}$/.test(v));
+ if(candidatos.length)return candidatos[candidatos.length-1];
+ const encontrados=String(texto).match(/(?:^|\D)(\d{7,8})(?:\D|$)/g);
+ if(!encontrados)return "";
+ const numeros=encontrados.map(v=>v.replace(/\D/g,"")).filter(v=>/^\d{7,8}$/.test(v));
+ return numeros.length?numeros[numeros.length-1]:"";
+}
+function iniciarCamara(){
+ modoIngreso="DNI";btnManual.disabled=true;btnEscanear.disabled=true;
+ document.getElementById("reader").style.display="block";
+ document.getElementById("estado").innerHTML="<h3>Escaneando DNI...</h3>";
+ if(typeof ZXing==="undefined"){document.getElementById("estado").innerHTML="<h3>No se pudo cargar el lector.</h3>";return;}
+ codeReader=new ZXing.BrowserMultiFormatReader();
+ codeReader.decodeFromVideoDevice(null,"reader",result=>{
+  if(!result)return;
+  const texto=result.text||(result.getText?result.getText():"");
+  const dni=extraerDni(texto);
+  if(!dni){document.getElementById("estado").innerHTML="<h3>No se pudo identificar el DNI.</h3>";return;}
+  document.getElementById("dni").value=dni;codeReader.reset();
+  document.getElementById("reader").style.display="none";buscarDni();
+ });
+}
+async function iniciarSelfie(){
+ document.getElementById("zonaSelfie").style.display="block";
+ document.getElementById("videoSelfie").style.display="block";
+ try{
+  streamSelfie=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:240},height:{ideal:180}},audio:false});
+  document.getElementById("videoSelfie").srcObject=streamSelfie;
+ }catch(e){document.getElementById("zonaSelfie").innerHTML="<h3>No se pudo abrir la cámara frontal.</h3>";}
+}
+function capturarSelfie(){
+ const video=document.getElementById("videoSelfie");
+ const canvas=document.getElementById("canvasSelfie");
+ const ctx=canvas.getContext("2d");
+ ctx.drawImage(video,0,0,160,120);
+ const imagen=canvas.toDataURL("image/jpeg",0.25);
+ fotoBase64=imagen.split(",")[1];
+ const preview=document.getElementById("previewSelfie");
+ preview.src=imagen;preview.hidden=false;
+ document.getElementById("selfieLista").hidden=false;
+ video.style.display="none";btnTomarSelfie.disabled=true;
+ if(streamSelfie)streamSelfie.getTracks().forEach(t=>t.stop());
+}
+function buscarDni(){
+ const dni=document.getElementById("dni").value;
+ document.getElementById("estado").innerHTML="<h3>Buscando invitado...</h3>";
+ fetch(URL_SCRIPT+"?dni="+encodeURIComponent(dni)).then(r=>r.json()).then(data=>{
+  document.getElementById("estado").innerHTML="";
+  if(!data.encontrado){document.getElementById("resultado").innerHTML="<h3>DNI no autorizado</h3>";return;}
+  document.getElementById("opciones").style.display="none";
+  document.getElementById("manual").style.display="none";
+  document.getElementById("reader").style.display="none";
+  document.getElementById("datosInvitado").innerHTML="<h3>Datos encontrados</h3><p><strong>Nombre:</strong> "+data.nombre+"</p><p><strong>DNI:</strong> "+data.dni+"</p>";
+  if(modoIngreso==="MANUAL")iniciarSelfie();
+  document.getElementById("resultado").innerHTML="<button id='btnAsiste' type='button'>Asistiré</button><br><br><button id='btnNoAsiste' type='button'>No asistiré</button>";
+  document.getElementById("btnAsiste").addEventListener("click",()=>responder(data.dni,"ASISTE"));
+  document.getElementById("btnNoAsiste").addEventListener("click",()=>responder(data.dni,"NO ASISTE"));
+ }).catch(()=>{document.getElementById("estado").innerHTML="";document.getElementById("resultado").innerHTML="<h3>Error al consultar el DNI.</h3>";});
+}
+function responder(dni,asistencia){
+ if(modoIngreso==="MANUAL"&&!fotoBase64){alert("Debe tomar una selfie antes de responder.");return;}
+ document.querySelectorAll("#resultado button").forEach(b=>b.disabled=true);
+ document.getElementById("estado").innerHTML="<h3>Guardando respuesta...</h3>";
+ fetch(URL_SCRIPT,{method:"POST",body:JSON.stringify({dni,asistencia,modoIngreso,foto:fotoBase64})}).then(r=>r.json()).then(data=>{
+  document.getElementById("estado").innerHTML="";
+  if(data.ok){document.getElementById("datosInvitado").innerHTML="";document.getElementById("zonaSelfie").style.display="none";document.getElementById("resultado").innerHTML="<h2>Gracias</h2><p>Su respuesta fue registrada correctamente.</p>";}
+  else if(data.mensaje==="YA_RESPONDIO"){document.getElementById("resultado").innerHTML="<h3>Este DNI ya registró una respuesta.</h3>";}
+  else{document.getElementById("resultado").insertAdjacentHTML("beforeend","<h3>Error al guardar la respuesta.</h3>");}
+ }).catch(()=>{document.getElementById("estado").innerHTML="";document.getElementById("resultado").insertAdjacentHTML("beforeend","<h3>Error de conexión.</h3>");});
+}
+</script>
 </body>
 </html>
