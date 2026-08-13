@@ -8,7 +8,7 @@
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;background:#f5f5f5}
-.contenedor{width:100%;max-width:440px;margin:0 auto;padding:22px;background:#fff;border-radius:12px}
+.contenedor{width:100%;max-width:440px;margin:0 auto;padding:22px;background:#fff;border-radius:12px;position:relative}
 button{padding:12px 20px;font-size:16px;margin:6px;cursor:pointer;border:1px solid #777;border-radius:8px}
 button:disabled{opacity:.5;cursor:not-allowed}
 input{width:100%;max-width:260px;padding:11px;font-size:18px;text-align:center}
@@ -17,10 +17,12 @@ video,img{display:block;margin:12px auto;border:1px solid #ccc;border-radius:8px
 #videoSelfie,#previewSelfie{width:160px;height:120px}
 #manual,#zonaSelfie{display:none}
 #estado,#resultado{margin-top:18px}
+#btnAdmin{position:absolute;top:8px;right:8px;padding:8px 10px;margin:0;font-size:20px;background:transparent;border:none;cursor:pointer}
 </style>
 </head>
 <body>
 <main class="contenedor">
+<button id="btnAdmin" type="button" title="Acceso de administrador" aria-label="Acceso de administrador">🔐</button>
 <h2>Confirmación Inicio de temporada</h2>
 <div id="opciones">
 <button id="btnEscanear" type="button">Escanear DNI</button><br>
@@ -51,10 +53,12 @@ let modoIngreso="DNI";
 let fotoBase64="";
 let streamSelfie=null;
 let codeReader=null;
+const btnAdmin=document.getElementById("btnAdmin");
 const btnEscanear=document.getElementById("btnEscanear");
 const btnManual=document.getElementById("btnManual");
 const btnContinuar=document.getElementById("btnContinuar");
 const btnTomarSelfie=document.getElementById("btnTomarSelfie");
+btnAdmin.addEventListener("click",()=>{window.location.href="admin.html";});
 btnEscanear.addEventListener("click",iniciarCamara);
 btnManual.addEventListener("click",mostrarManual);
 btnContinuar.addEventListener("click",buscarManual);
