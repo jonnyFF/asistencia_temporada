@@ -129,15 +129,68 @@ function buscarDni(){
  }).catch(()=>{document.getElementById("estado").innerHTML="";document.getElementById("resultado").innerHTML="<h3>Error al consultar el DNI.</h3>";});
 }
 function responder(dni,asistencia){
- if(modoIngreso==="MANUAL"&&!fotoBase64){alert("Debe tomar una selfie antes de responder.");return;}
- document.querySelectorAll("#resultado button").forEach(b=>b.disabled=true);
+ if(modoIngreso==="MANUAL"&&!fotoBase64){
+  alert("Debe tomar una selfie antes de responder.");
+  return;
+ }
+
+ const botones=document.querySelectorAll("#resultado button");
+ botones.forEach(b=>b.disabled=true);
  document.getElementById("estado").innerHTML="<h3>Guardando respuesta...</h3>";
- fetch(URL_SCRIPT,{method:"POST",body:JSON.stringify({dni,asistencia,modoIngreso,foto:fotoBase64})}).then(r=>r.json()).then(data=>{
+
+ fetch(URL_SCRIPT,{
+  method:"POST",
+  body:JSON.stringify({
+   dni:dni,
+   asistencia:asistencia,
+   modoIngreso:modoIngreso,
+   foto:fotoBase64
+  })
+ })
+ .then(async respuesta=>{
+  const texto=await respuesta.text();
+
+  if(!respuesta.ok){
+   throw new Error("HTTP "+respuesta.status+": "+texto.substring(0,300));
+  }
+
+  try{
+   return JSON.parse(texto);
+  }catch(error){
+   throw new Error("Apps Script no devolvió JSON: "+texto.substring(0,300));
+  }
+ })
+ .then(data=>{
   document.getElementById("estado").innerHTML="";
-  if(data.ok){document.getElementById("datosInvitado").innerHTML="";document.getElementById("zonaSelfie").style.display="none";document.getElementById("resultado").innerHTML="<h2>Gracias</h2><p>Su respuesta fue registrada correctamente.</p>";}
-  else if(data.mensaje==="YA_RESPONDIO"){document.getElementById("resultado").innerHTML="<h3>Este DNI ya registró una respuesta.</h3>";}
-  else{document.getElementById("resultado").insertAdjacentHTML("beforeend","<h3>Error al guardar la respuesta.</h3>");}
- }).catch(()=>{document.getElementById("estado").innerHTML="";document.getElementById("resultado").insertAdjacentHTML("beforeend","<h3>Error de conexión.</h3>");});
+
+  if(data.ok){
+   document.getElementById("datosInvitado").innerHTML="";
+   document.getElementById("zonaSelfie").style.display="none";
+   document.getElementById("resultado").innerHTML="<h2>Gracias</h2><p>Su respuesta fue registrada correctamente.</p>";
+   return;
+  }
+
+  botones.forEach(b=>b.disabled=false);
+
+  if(data.mensaje==="YA_RESPONDIO"){
+   document.getElementById("resultado").innerHTML="<h3>Este DNI ya registró una respuesta.</h3>";
+   return;
+  }
+
+  const detalle=data.error||data.mensaje||"Error desconocido";
+  document.getElementById("resultado").insertAdjacentHTML(
+   "beforeend",
+   "<h3>Error al guardar la respuesta</h3><p>Detalle: "+String(detalle)+"</p>"
+  );
+ })
+ .catch(error=>{
+  document.getElementById("estado").innerHTML="";
+  botones.forEach(b=>b.disabled=false);
+  document.getElementById("resultado").insertAdjacentHTML(
+   "beforeend",
+   "<h3>Error de conexión</h3><p>Detalle: "+error.message+"</p>"
+  );
+ });
 }
 </script>
 </body>
