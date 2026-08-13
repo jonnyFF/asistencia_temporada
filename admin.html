@@ -7,90 +7,105 @@
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:20px;text-align:center}
-.contenedor{width:100%;max-width:500px;margin:0 auto;background:#fff;padding:25px;border-radius:12px}
+.contenedor{max-width:500px;margin:auto;background:#fff;padding:25px;border-radius:12px}
 label{display:block;margin-top:18px;font-weight:bold}
 input{width:100%;padding:12px;margin-top:7px;font-size:16px;border:1px solid #aaa;border-radius:7px}
-button{padding:13px 24px;margin-top:24px;font-size:16px;cursor:pointer;border:1px solid #777;border-radius:8px}
+button{padding:12px 20px;margin:12px 5px;font-size:16px;cursor:pointer;border:1px solid #777;border-radius:8px}
 button:disabled{opacity:.5;cursor:not-allowed}
+#panelAdmin{display:none}
 #mensaje{margin-top:20px}
 </style>
 </head>
 <body>
 <main class="contenedor">
+<div id="acceso">
+<h2>Acceso protegido</h2>
+<p>Ingrese la contraseña de administrador.</p>
+<input type="password" id="clave" autocomplete="current-password" placeholder="Contraseña">
+<br>
+<button id="btnIngresar" type="button">Ingresar</button>
+<button id="btnVolverAcceso" type="button">← Volver</button>
+<div id="mensajeAcceso"></div>
+</div>
+
+<div id="panelAdmin">
 <h2>Configuración del administrador</h2>
-
-<label for="clave">Contraseña</label>
-<input type="password" id="clave" autocomplete="current-password">
-
 <label for="planilla">Enlace de Google Sheets</label>
-<input type="url" id="planilla" placeholder="Pegue el enlace de la planilla">
-
+<input id="planilla" type="url" placeholder="Pegue el enlace de la planilla">
 <label for="carpetaDrive">Enlace de la carpeta de Google Drive</label>
-<input type="url" id="carpetaDrive" placeholder="Pegue el enlace de la carpeta">
-
+<input id="carpetaDrive" type="url" placeholder="Pegue el enlace de la carpeta">
 <label for="nombreHoja">Nombre de la hoja</label>
-<input type="text" id="nombreHoja" value="Hoja 1">
-
+<input id="nombreHoja" value="Hoja 1">
 <button id="btnGuardar" type="button">Guardar configuración</button>
+<button id="btnVolver" type="button">← Volver</button>
 <div id="mensaje"></div>
+</div>
 </main>
 
 <script>
 const URL_SCRIPT="https://script.google.com/macros/s/AKfycbxaDDToHZxiQgilvfk17bqfEbVsgwFg1yMd266YQyt1QU-ISruml20uMfDHxxjz88IrCQ/exec";
+let tokenAdmin="";
+const $=id=>document.getElementById(id);
 
-const btnGuardar=document.getElementById("btnGuardar");
-btnGuardar.addEventListener("click",guardarConfiguracion);
+$("btnIngresar").addEventListener("click",validarAcceso);
+$("btnGuardar").addEventListener("click",guardarConfiguracion);
+$("btnVolver").addEventListener("click",volverInicio);
+$("btnVolverAcceso").addEventListener("click",volverInicio);
+$("clave").addEventListener("keydown",evento=>{if(evento.key==="Enter")validarAcceso();});
 
-async function guardarConfiguracion(){
- const clave=document.getElementById("clave").value.trim();
- const planilla=document.getElementById("planilla").value.trim();
- const carpetaDrive=document.getElementById("carpetaDrive").value.trim();
- const nombreHoja=document.getElementById("nombreHoja").value.trim();
- const mensaje=document.getElementById("mensaje");
+function volverInicio(){
+ tokenAdmin="";
+ location.href="index.html";
+}
 
- if(!clave||!planilla||!carpetaDrive||!nombreHoja){
-  mensaje.innerHTML="<h3>Complete todos los campos.</h3>";
-  return;
- }
-
- btnGuardar.disabled=true;
- mensaje.innerHTML="<h3>Guardando configuración...</h3>";
-
+async function validarAcceso(){
+ const clave=$("clave").value;
+ if(!clave){$("mensajeAcceso").innerHTML="<h3>Ingrese la contraseña.</h3>";return;}
+ $("btnIngresar").disabled=true;
+ $("mensajeAcceso").innerHTML="<h3>Validando...</h3>";
  try{
-  const respuesta=await fetch(URL_SCRIPT,{
-   method:"POST",
-   body:JSON.stringify({
-    accion:"GUARDAR_CONFIG",
-    clave:clave,
-    planilla:planilla,
-    carpetaDrive:carpetaDrive,
-    nombreHoja:nombreHoja
-   })
-  });
-
-  const texto=await respuesta.text();
-  let datos;
-
-  try{
-   datos=JSON.parse(texto);
-  }catch(error){
-   throw new Error("La respuesta del servicio no es válida.");
-  }
-
+  const respuesta=await fetch(URL_SCRIPT,{method:"POST",body:JSON.stringify({accion:"VALIDAR_ADMIN",clave:clave})});
+  const datos=await respuesta.json();
   if(datos.ok){
-   mensaje.innerHTML="<h3>Configuración guardada correctamente.</h3>";
-   document.getElementById("clave").value="";
-  }else if(datos.mensaje==="CLAVE_INCORRECTA"){
-   mensaje.innerHTML="<h3>Contraseña incorrecta.</h3>";
-  }else if(datos.mensaje==="ADMIN_CLAVE_NO_CONFIGURADA"){
-   mensaje.innerHTML="<h3>Falta configurar ADMIN_CLAVE en Apps Script.</h3>";
+   tokenAdmin=datos.token;
+   $("acceso").style.display="none";
+   $("panelAdmin").style.display="block";
+   $("clave").value="";
   }else{
-   mensaje.innerHTML="<h3>Error al guardar.</h3><p>"+(datos.error||datos.mensaje||"Error desconocido")+"</p>";
+   $("mensajeAcceso").innerHTML="<h3>Contraseña incorrecta.</h3>";
   }
  }catch(error){
-  mensaje.innerHTML="<h3>Error de conexión.</h3><p>"+error.message+"</p>";
+  $("mensajeAcceso").innerHTML="<h3>Error de conexión.</h3>";
  }finally{
-  btnGuardar.disabled=false;
+  $("btnIngresar").disabled=false;
+ }
+}
+
+async function guardarConfiguracion(){
+ const planilla=$("planilla").value.trim();
+ const carpetaDrive=$("carpetaDrive").value.trim();
+ const nombreHoja=$("nombreHoja").value.trim();
+ if(!tokenAdmin){$("mensaje").innerHTML="<h3>La sesión no es válida.</h3>";return;}
+ if(!planilla||!carpetaDrive||!nombreHoja){$("mensaje").innerHTML="<h3>Complete todos los campos.</h3>";return;}
+ $("btnGuardar").disabled=true;
+ $("mensaje").innerHTML="<h3>Guardando...</h3>";
+ try{
+  const respuesta=await fetch(URL_SCRIPT,{method:"POST",body:JSON.stringify({accion:"GUARDAR_CONFIG",token:tokenAdmin,planilla:planilla,carpetaDrive:carpetaDrive,nombreHoja:nombreHoja})});
+  const datos=await respuesta.json();
+  if(datos.ok){
+   $("mensaje").innerHTML="<h3>Configuración guardada correctamente.</h3>";
+  }else if(datos.mensaje==="SESION_ADMIN_INVALIDA"){
+   tokenAdmin="";
+   $("panelAdmin").style.display="none";
+   $("acceso").style.display="block";
+   $("mensajeAcceso").innerHTML="<h3>La sesión venció. Ingrese nuevamente.</h3>";
+  }else{
+   $("mensaje").innerHTML="<h3>Error: "+(datos.error||datos.mensaje||"Error desconocido")+"</h3>";
+  }
+ }catch(error){
+  $("mensaje").innerHTML="<h3>Error de conexión.</h3>";
+ }finally{
+  $("btnGuardar").disabled=false;
  }
 }
 </script>
